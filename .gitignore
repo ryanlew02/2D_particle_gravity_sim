@@ -1,0 +1,5 @@
+# Compiled executable
+/simulation
+
+# macOS debugging symbols
+*.dSYM/
