@@ -1,5 +1,58 @@
-# Compiled executable
+# ==============================
+# macOS
+# ==============================
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+
+# ==============================
+# C++ Compiled Files
+# ==============================
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.out
+*.exe
+
+# Project executable
 /simulation
 
-# macOS debugging symbols
+# ==============================
+# Debug Symbols (macOS / LLDB)
+# ==============================
 *.dSYM/
+*.dSYM.zip
+*.dSYM.tar.gz
+
+# ==============================
+# VS Code
+# ==============================
+.vscode/ipch/
+.vscode/*.log
+*.code-workspace
+
+# ==============================
+# CMake
+# ==============================
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# ==============================
+# Temporary Files
+# ==============================
+*.tmp
+*.temp
+*.swp
+*.swo
+*~

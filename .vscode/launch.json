@@ -5,7 +5,7 @@
             "name": "Physics Simulation",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/simulation",
+            "program": "${workspaceFolder}/build/simulation",
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "Build Physics Simulation"
         }
