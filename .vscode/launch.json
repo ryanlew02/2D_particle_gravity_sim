@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Physics Simulation",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/simulation",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build Physics Simulation"
+        }
+    ]
+}
