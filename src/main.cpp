@@ -1,15 +1,20 @@
-#include <glad/gl.h>
 #define GLFW_INCLUDE_NONE
+#include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <cmath>
 #include <utility>
 #include <cstddef>
+#include <vector>
+
+
 
 GLFWwindow* InitWindow();
 GLuint InitShaderProgram(const char* vertexSource, const char* fragmentSource);
 void InitVAOVBO(GLuint& VAO, GLuint& VBO, const float* vertices, size_t vertexCount);
 std::pair<const char*, const char*> GetShaderSources();
+std::vector<float> CreateCircle(float centerX, float centerY, float radius, int res);
+void DrawCircle(GLuint& VAO, GLint& positionLocation, float x, float y, int vertexCount);
 
 int main() {
 
@@ -22,30 +27,46 @@ int main() {
 
     auto [vertexShaderSource, fragmentShaderSource] = GetShaderSources();
     GLuint shaderProgram = InitShaderProgram(vertexShaderSource, fragmentShaderSource);
+    GLint posLocation = glGetUniformLocation(shaderProgram, "uPosition");
+
+    if (posLocation == -1) {
+        std::cerr << "Could not find position location";
+        return -1;
+    }
 
     //tell OpenGL which shader program we want to use
     glUseProgram(shaderProgram);
 
-    GLfloat vertices[] = {
-        -0.5f, -0.5f * float(sqrt(3)) / 3, //bottom left corner
-        0.5f, -0.5f * float(sqrt(3)) / 3, //bottom right corner
-        0.0f, 0.5f * float(sqrt(3)) / 3 //upper point
-    };
+    std::vector<float> vertices = CreateCircle(0.0f, 0.0f, 0.1f, 64);
 
     //create reference containers for the vertex array object and the vertex buffer object
     GLuint VAO, VBO;
-    InitVAOVBO(VAO, VBO, vertices, 3);
+    InitVAOVBO(VAO, VBO, vertices.data(), vertices.size() / 2);
 
+    float x = 0.0f;
+    float y = 0.7f;
+
+    float velocityY = 0.0f;
+    float gravity = -1.0f;
+
+    float lastTime = static_cast<float>(glfwGetTime());
 
     //main loop
     while (!glfwWindowShouldClose(window)) {
 
+        //calculate delta time and replace current time
+        float currentTime = static_cast<float>(glfwGetTime());
+        float deltaTime = currentTime - lastTime;
+        lastTime = currentTime;
+
+        //physics update
+        velocityY += gravity * deltaTime;
+        y += velocityY * deltaTime;
+
         glClear(GL_COLOR_BUFFER_BIT);
 
-        //bind the VAO so OpenGL knows how to use it
-        glBindVertexArray(VAO);
-        //draw the triangles using the GL_TRIANGLES primitive
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        //draw the circle
+        DrawCircle(VAO, posLocation, x, y, static_cast<int>(vertices.size() / 2));
 
         //swap buffers and see if there are any event updates
         glfwSwapBuffers(window);
@@ -200,9 +221,11 @@ std::pair<const char*, const char*> GetShaderSources() {
     #version 330 core
     layout (location = 0) in vec2 aPos;
 
+    uniform vec2 uPosition;
+
     void main()
     {
-        gl_Position = vec4(aPos, 0.0, 1.0);
+        gl_Position = vec4(aPos + uPosition, 0.0, 1.0);
     }
     )";
 
@@ -219,3 +242,37 @@ std::pair<const char*, const char*> GetShaderSources() {
 
     return {vertexShaderSource, fragmentShaderSource};   
 }
+
+std::vector<float> CreateCircle(float centerX, float centerY, float radius, int res) {
+
+    std::vector<float> vertices;
+
+    if (res < 3) return vertices;
+
+    vertices.push_back(centerX);
+    vertices.push_back(centerY);
+
+    for (int i = 0; i <= res; i++) {
+        
+        float angle = 2.0f * 3.1415926535 * i / res;
+
+        float x = centerX + radius * std::cos(angle);
+        float y = centerY + radius * std::sin(angle);
+
+        vertices.push_back(x);
+        vertices.push_back(y);
+    }
+
+    return vertices;
+}
+
+void DrawCircle(GLuint& VAO, GLint& positionLocation, float x, float y, int vertexCount) {
+
+    //send position to the vertex shader
+    glUniform2f(positionLocation, x, y);
+
+    //draw circle
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
+}
+

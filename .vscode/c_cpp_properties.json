@@ -1,16 +1,17 @@
+
 {
     "configurations": [
         {
-            "name": "Mac",
+            "name": "Windows",
             "compileCommands": "${workspaceFolder}/build/compile_commands.json",
             "includePath": [
                 "${workspaceFolder}/include",
-                "/opt/homebrew/include"
+                "${workspaceFolder}/**"
             ],
-            "compilerPath": "/usr/bin/clang++",
+            "compilerPath": "C:/msys64/ucrt64/bin/g++.exe",
             "cStandard": "c17",
             "cppStandard": "c++17",
-            "intelliSenseMode": "macos-clang-arm64"
+            "intelliSenseMode": "windows-gcc-x64"
         }
     ],
     "version": 4
