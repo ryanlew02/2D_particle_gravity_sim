@@ -2,6 +2,9 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <cmath>
+#include <utility>
+#include <cstddef>
 
 GLFWwindow* InitWindow();
 GLuint InitShaderProgram(const char* vertexSource, const char* fragmentSource);
@@ -12,6 +15,11 @@ int main() {
 
     //init the window and shaderProgram
     GLFWwindow* window = InitWindow();
+
+    if (!window) {
+        return -1;
+    }
+
     auto [vertexShaderSource, fragmentShaderSource] = GetShaderSources();
     GLuint shaderProgram = InitShaderProgram(vertexShaderSource, fragmentShaderSource);
 
@@ -62,20 +70,24 @@ GLFWwindow* InitWindow() {
     //initialize glfw with checks
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW\n";
+        return nullptr;
     }
 
     // macOS OpenGL configuration
+    // glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+
+    // Windows OpenGL configuration
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 
     //create window and make sure it's initialized
     GLFWwindow* window = glfwCreateWindow(
         800, 800, "Physics Simulation", nullptr, nullptr
     );
-
-    glfwMakeContextCurrent(window);
 
     if (!window) {
         std::cerr << "Failed to create GLFW window\n";
@@ -83,10 +95,18 @@ GLFWwindow* InitWindow() {
         return nullptr;
     }
 
+    //tells open GL that window is our current context
+    glfwMakeContextCurrent(window);
+
+    //enables v-sync
+    glfwSwapInterval(1);
+
     //init version and gladLoadGL
     int version = gladLoadGL((GLADloadfunc)glfwGetProcAddress);
     if (version == 0) {
         std::cerr << "Failed to initialize GLAD\n";
+        glfwTerminate();
+        return nullptr;
     }
 
     //create viewport background color
@@ -197,5 +217,5 @@ std::pair<const char*, const char*> GetShaderSources() {
     }
     )";
 
-    return {vertexShaderSource, fragmentShaderSource};
+    return {vertexShaderSource, fragmentShaderSource};   
 }
