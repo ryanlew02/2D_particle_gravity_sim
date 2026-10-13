@@ -6,6 +6,7 @@
 #include <utility>
 #include <cstddef>
 #include <vector>
+#include <algorithm>
 
 
 
@@ -16,10 +17,48 @@ std::pair<const char*, const char*> GetShaderSources();
 std::vector<float> CreateCircle(float centerX, float centerY, float radius, int res);
 void DrawCircle(GLuint& VAO, GLint& positionLocation, float x, float y, int vertexCount);
 
+class Particle {
+
+public:
+    std::vector<float> position;
+    std::vector<float> velocity;
+    float radius;
+
+    Particle(std::vector<float> position, std::vector<float> velocity, float radius) {
+        this->position = position;
+        this->velocity = velocity;
+        this->radius = radius;
+    }
+
+    void accelerate(float x, float y, float deltaTime) {
+        this->velocity[0] += x * deltaTime;
+        this->velocity[1] += y * deltaTime;
+    }
+
+    void updatePos(float deltaTime) {
+        this->position[0] += velocity[0] * deltaTime;
+        this->position[1] += velocity[1] * deltaTime;
+    }
+
+    void DrawCircle(GLuint& VAO, GLint& positionLocation, int vertexCount) {
+
+        //send position to the vertex shader
+        glUniform2f(positionLocation, position[0], position[1]);
+
+        //draw circle
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
+    }
+};
+
 int main() {
 
     //init the window and shaderProgram
     GLFWwindow* window = InitWindow();
+
+    //get screenHeight and Width
+    int screenHeight, screenWidth;
+    glfwGetWindowSize(window, &screenWidth, &screenHeight);
 
     if (!window) {
         return -1;
@@ -46,27 +85,48 @@ int main() {
     float x = 0.0f;
     float y = 0.7f;
 
-    float velocityY = 0.0f;
-    float gravity = -1.0f;
+    std::vector<float> velocity = {0.0f, 0.0f};
+    float gravity = -1.5f;
 
     float lastTime = static_cast<float>(glfwGetTime());
+    float currentTime, deltaTime;
+
+    std::vector<Particle> particles = {
+        Particle({0.3f, 0.75f}, {0.0f, 0.0f}, 0.1),
+        Particle({-0.3f, 0.35f}, {0.0f, 0.0f}, 0.1)
+    };
 
     //main loop
     while (!glfwWindowShouldClose(window)) {
 
         //calculate delta time and replace current time
-        float currentTime = static_cast<float>(glfwGetTime());
-        float deltaTime = currentTime - lastTime;
+        currentTime = static_cast<float>(glfwGetTime());
+        deltaTime = currentTime - lastTime;
         lastTime = currentTime;
-
-        //physics update
-        velocityY += gravity * deltaTime;
-        y += velocityY * deltaTime;
 
         glClear(GL_COLOR_BUFFER_BIT);
 
-        //draw the circle
-        DrawCircle(VAO, posLocation, x, y, static_cast<int>(vertices.size() / 2));
+        for (auto& particle : particles) {
+            particle.accelerate(gravity, gravity, deltaTime);
+            particle.updatePos(deltaTime);
+            particle.DrawCircle(VAO, posLocation, static_cast<int>(vertices.size() / 2));
+        
+            if (particle.position[0] < -0.9f) {
+                particle.position[0] = -0.9f;
+                particle.velocity[0] *= -0.95;
+            } else if (particle.position[0] > 0.9f) {
+                particle.position[0] = 0.9f;
+                particle.velocity[0] *= -0.95f;
+            }
+
+             if (particle.position[1] < -0.9f) {
+                particle.position[1] = -0.9f;
+                particle.velocity[1] *= -0.95;
+            } else if (particle.position[1] > 0.9f) {
+                particle.position[1] = 0.9f;
+                particle.velocity[1] *= -0.95f;
+            }
+        }
 
         //swap buffers and see if there are any event updates
         glfwSwapBuffers(window);
@@ -95,15 +155,15 @@ GLFWwindow* InitWindow() {
     }
 
     // macOS OpenGL configuration
-    // glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 
     // Windows OpenGL configuration
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    // glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     //create window and make sure it's initialized
     GLFWwindow* window = glfwCreateWindow(
@@ -120,7 +180,7 @@ GLFWwindow* InitWindow() {
     glfwMakeContextCurrent(window);
 
     //enables v-sync
-    glfwSwapInterval(1);
+    glfwSwapInterval(0);
 
     //init version and gladLoadGL
     int version = gladLoadGL((GLADloadfunc)glfwGetProcAddress);
@@ -130,12 +190,20 @@ GLFWwindow* InitWindow() {
         return nullptr;
     }
 
-    //create viewport background color
-    glViewport(0, 0, 800, 800);
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    glViewport(0, 0, width, height);
+
+    glfwSetFramebufferSizeCallback(window, 
+        [](GLFWwindow* window, int width, int height) {
+            glViewport(0, 0, width, height);
+        }
+    );
 
     return window;
 }
 
+//create shader program
 GLuint InitShaderProgram(const char* vertexSource, const char* fragmentSource) {
 
     //create shader object and get reference
@@ -191,6 +259,7 @@ GLuint InitShaderProgram(const char* vertexSource, const char* fragmentSource) {
 
 }
 
+//create VAO and VBO
 void InitVAOVBO(GLuint& VAO, GLuint& VBO, const float* vertices, size_t vertexCount) {
     //generate the vao and vbo with 1 object each
     glGenVertexArrays(1, &VAO);
@@ -214,6 +283,7 @@ void InitVAOVBO(GLuint& VAO, GLuint& VBO, const float* vertices, size_t vertexCo
     glBindVertexArray(0);
 }
 
+//get shader source constants
 std::pair<const char*, const char*> GetShaderSources() {
 
     //vertex shader source code
@@ -243,6 +313,7 @@ std::pair<const char*, const char*> GetShaderSources() {
     return {vertexShaderSource, fragmentShaderSource};   
 }
 
+//create circle with center, radius, and resolution
 std::vector<float> CreateCircle(float centerX, float centerY, float radius, int res) {
 
     std::vector<float> vertices;
@@ -266,6 +337,7 @@ std::vector<float> CreateCircle(float centerX, float centerY, float radius, int 
     return vertices;
 }
 
+//draw circle from center x and y
 void DrawCircle(GLuint& VAO, GLint& positionLocation, float x, float y, int vertexCount) {
 
     //send position to the vertex shader
