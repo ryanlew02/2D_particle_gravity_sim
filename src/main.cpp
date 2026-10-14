@@ -150,16 +150,13 @@ int main() {
             particle.drawCircle(VAO, posLocation, radiusLocation, static_cast<int>(vertices.size() / 2));
         }
 
-        for (int i = 0; i < particles.size(); i++) {
-            for (int j = i + 1; j < particles.size(); j++) {
-                if (particles[i].isColliding(particles[j])) {
-                    particles[i].vx *= particles[i].restitution;
-                    particles[i].vy *= particles[i].restitution;
-                    particles[j].vx *= particles[j].restitution;
-                    particles[j].vy *= particles[j].restitution;
-                }
-            }
-        }
+        // for (int i = 0; i < particles.size(); i++) {
+        //     for (int j = i + 1; j < particles.size(); j++) {
+        //         if (particles[i].isColliding(particles[j])) {
+                    
+        //         }
+        //     }
+        // }
 
         //swap buffers and see if there are any event updates
         glfwSwapBuffers(window);
