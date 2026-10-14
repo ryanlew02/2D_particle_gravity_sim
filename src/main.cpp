@@ -8,14 +8,17 @@
 #include <vector>
 #include <algorithm>
 
+// ****** FUNCTION & CLASS DECLARATIONS ****** //
 
-
+class Particle;
 GLFWwindow* InitWindow();
 GLuint InitShaderProgram(const char* vertexSource, const char* fragmentSource);
 void InitVAOVBO(GLuint& VAO, GLuint& VBO, const float* vertices, size_t vertexCount);
 std::pair<const char*, const char*> GetShaderSources();
 std::vector<float> CreateCircle(float centerX, float centerY, float radius, int res);
-void DrawCircle(GLuint& VAO, GLint& positionLocation, float x, float y, int vertexCount);
+void handleCollision(Particle& a, Particle& b);
+
+// ****** CLASS IMPLEMENTATIONS ****** //
 
 class Particle {
 
@@ -23,16 +26,20 @@ public:
     float x, y;
     float vx, vy;
     float radius, diameter;
-    float restitution = -0.95;
+    float restitution = 0.95f;
+    float density, mass;
 
 
-    Particle(float x, float y, float vx, float vy, float radius) {
+    Particle(float x, float y, float vx, float vy, float radius, float density = 1.0f) {
         this->x = x;
         this->y = y;
         this->vx = vx;
         this->vy = vy;
         this->radius = radius;
         this->diameter = radius * 2;
+        this->density = density;
+
+        this->mass = density * 3.14159265 * radius * radius;
     }
 
     void accelerate(float x, float y, float deltaTime) {
@@ -62,22 +69,22 @@ public:
         float max_boundry = 1.0f - radius;
 
         if (x < min_boundry) {
-            vx *= -0.95;
+            vx *= -restitution;
             x = min_boundry;
         } else if (x > max_boundry) {
-            vx *= -0.95;
+            vx *= -restitution;
             x = max_boundry;
         }
         if (y < min_boundry) {
-            vy *= -0.95;
+            vy *= -restitution;
             y = min_boundry;
         } else if (y > max_boundry) {
-            vy *= -0.95;
+            vy *= -restitution;
             y = max_boundry;
         }
-
     }
 
+    //checks if 2 circles are colliding
     bool isColliding(const Particle& otherParticle) {
         float dx = x - otherParticle.x;
         float dy = y - otherParticle.y;
@@ -86,11 +93,19 @@ public:
         float rDist = radius + otherParticle.radius;
 
         return dist <= rDist * rDist;
-
-        
     }
 
+    //applys a force to current object
+    void applyForce(float fx, float fy, float deltaTime) {
+        float ax = fx / mass;
+        float ay = fy / mass;
+
+        vx = ax * deltaTime;
+        vy = ay * deltaTime;
+    }
 };
+
+// ****** MAIN FUNCTION ****** //
 
 int main() {
 
@@ -129,8 +144,9 @@ int main() {
     float gravity = -1.5f;
 
     std::vector<Particle> particles = {
-        Particle(0.3f, 0.75f, 0.0f, 0.0f, 0.2f),
-        Particle(-0.3f, 0.35f, 0.0f, 0.0f, 0.1f)
+        Particle(0.3f, 0.75f, 0.0f, 0.0f, 0.1f),
+        Particle(-0.3f, 0.35f, 0.0f, 0.0f, 0.05f),
+        Particle(0.83f, -0.1f, 0.0f, 0.0f, 0.15f)
     };
 
     //main loop
@@ -146,17 +162,20 @@ int main() {
         for (auto& particle : particles) {
             particle.accelerate(gravity, gravity, deltaTime);
             particle.updatePos(deltaTime);
+        }
+
+        for (int i = 0; i < particles.size(); i++) {
+            for (int j = i + 1; j < particles.size(); j++) {
+                if (particles[i].isColliding(particles[j])) {
+                    handleCollision(particles[i], particles[j]);
+                }
+            }
+        }
+
+        for (auto& particle : particles) {
             particle.handleCollisions();
             particle.drawCircle(VAO, posLocation, radiusLocation, static_cast<int>(vertices.size() / 2));
         }
-
-        // for (int i = 0; i < particles.size(); i++) {
-        //     for (int j = i + 1; j < particles.size(); j++) {
-        //         if (particles[i].isColliding(particles[j])) {
-                    
-        //         }
-        //     }
-        // }
 
         //swap buffers and see if there are any event updates
         glfwSwapBuffers(window);
@@ -174,6 +193,8 @@ int main() {
 
     return 0;
 }
+
+// ****** FUNCTION IMPLEMENTATIONS ****** //
 
 GLFWwindow* InitWindow() {
 
@@ -366,4 +387,65 @@ std::vector<float> CreateCircle(float centerX, float centerY, float radius, int 
     }
 
     return vertices;
+}
+
+void handleCollision(Particle& a, Particle& b) {
+    float dx = b.x - a.x;
+    float dy = b.y - a.y;
+
+    float dist = std::sqrt(dx * dx + dy * dy);
+    float rSum = a.radius + b.radius;
+
+    if (dist >= rSum) {
+        return;
+    }
+
+    float nx, ny;
+
+    if (dist > 0.000000001f) {
+        nx = dx / dist;
+        ny = dy / dist;
+    } else {
+        nx = 1.0f;
+        ny = 0.0f;
+        dist = 0.0f;
+    }
+
+    float rvx = b.vx - a.vx;
+    float rvy = b.vy - a.vy;
+
+    float invMassA = 1.0f / a.mass;
+    float invMassB = 1.0f / b.mass;
+
+    float velocityAlongNormal = rvx * nx + rvy * ny;
+
+    float e = std::min(a.restitution, b.restitution);
+
+    if (velocityAlongNormal < 0.0f) {
+        float impulse = -(1.0f + e) 
+        * velocityAlongNormal 
+        / (invMassA + invMassB);
+
+        float impulseX = nx * impulse;
+        float impulseY = ny * impulse;
+
+        a.vx -= impulseX * invMassA;
+        a.vy -= impulseY * invMassA;
+
+        b.vx += impulseX * invMassB;
+        b.vy += impulseY * invMassB;
+    }
+
+    float pen = rSum - dist;
+
+    if (pen > 0.0f) {
+        float correction = pen / (invMassA + invMassB);
+
+        a.x -= correction * invMassA * nx;
+        a.y -= correction * invMassA * ny;
+
+        b.x += correction * invMassB * nx;
+        b.y += correction * invMassB * ny;
+    }
+
 }
