@@ -20,35 +20,76 @@ void DrawCircle(GLuint& VAO, GLint& positionLocation, float x, float y, int vert
 class Particle {
 
 public:
-    std::vector<float> position;
-    std::vector<float> velocity;
-    float radius;
+    float x, y;
+    float vx, vy;
+    float radius, diameter;
+    float restitution = -0.95;
 
-    Particle(std::vector<float> position, std::vector<float> velocity, float radius) {
-        this->position = position;
-        this->velocity = velocity;
+
+    Particle(float x, float y, float vx, float vy, float radius) {
+        this->x = x;
+        this->y = y;
+        this->vx = vx;
+        this->vy = vy;
         this->radius = radius;
+        this->diameter = radius * 2;
     }
 
     void accelerate(float x, float y, float deltaTime) {
-        this->velocity[0] += x * deltaTime;
-        this->velocity[1] += y * deltaTime;
+        this->vx += x * deltaTime;
+        this->vy += y * deltaTime;
     }
 
     void updatePos(float deltaTime) {
-        this->position[0] += velocity[0] * deltaTime;
-        this->position[1] += velocity[1] * deltaTime;
+        this->x += vx * deltaTime;
+        this->y += vy * deltaTime;
     }
 
-    void DrawCircle(GLuint& VAO, GLint& positionLocation, int vertexCount) {
+    void drawCircle(GLuint& VAO, GLint& positionLocation, GLint& radiusLocation, int vertexCount) {
 
         //send position to the vertex shader
-        glUniform2f(positionLocation, position[0], position[1]);
+        glUniform2f(positionLocation, x, y);
+        glUniform1f(radiusLocation, radius);
 
         //draw circle
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
     }
+
+    void handleCollisions() {
+
+        float min_boundry = -1.0f + radius;
+        float max_boundry = 1.0f - radius;
+
+        if (x < min_boundry) {
+            vx *= -0.95;
+            x = min_boundry;
+        } else if (x > max_boundry) {
+            vx *= -0.95;
+            x = max_boundry;
+        }
+        if (y < min_boundry) {
+            vy *= -0.95;
+            y = min_boundry;
+        } else if (y > max_boundry) {
+            vy *= -0.95;
+            y = max_boundry;
+        }
+
+    }
+
+    bool isColliding(const Particle& otherParticle) {
+        float dx = x - otherParticle.x;
+        float dy = y - otherParticle.y;
+
+        float dist = dx * dx + dy * dy;
+        float rDist = radius + otherParticle.radius;
+
+        return dist <= rDist * rDist;
+
+        
+    }
+
 };
 
 int main() {
@@ -67,6 +108,7 @@ int main() {
     auto [vertexShaderSource, fragmentShaderSource] = GetShaderSources();
     GLuint shaderProgram = InitShaderProgram(vertexShaderSource, fragmentShaderSource);
     GLint posLocation = glGetUniformLocation(shaderProgram, "uPosition");
+    GLint radiusLocation = glGetUniformLocation(shaderProgram, "uRadius");
 
     if (posLocation == -1) {
         std::cerr << "Could not find position location";
@@ -76,24 +118,19 @@ int main() {
     //tell OpenGL which shader program we want to use
     glUseProgram(shaderProgram);
 
-    std::vector<float> vertices = CreateCircle(0.0f, 0.0f, 0.1f, 64);
+    std::vector<float> vertices = CreateCircle(0.0f, 0.0f, 1.0f, 64);
 
     //create reference containers for the vertex array object and the vertex buffer object
     GLuint VAO, VBO;
     InitVAOVBO(VAO, VBO, vertices.data(), vertices.size() / 2);
 
-    float x = 0.0f;
-    float y = 0.7f;
-
-    std::vector<float> velocity = {0.0f, 0.0f};
-    float gravity = -1.5f;
-
     float lastTime = static_cast<float>(glfwGetTime());
     float currentTime, deltaTime;
+    float gravity = -1.5f;
 
     std::vector<Particle> particles = {
-        Particle({0.3f, 0.75f}, {0.0f, 0.0f}, 0.1),
-        Particle({-0.3f, 0.35f}, {0.0f, 0.0f}, 0.1)
+        Particle(0.3f, 0.75f, 0.0f, 0.0f, 0.2f),
+        Particle(-0.3f, 0.35f, 0.0f, 0.0f, 0.1f)
     };
 
     //main loop
@@ -109,22 +146,18 @@ int main() {
         for (auto& particle : particles) {
             particle.accelerate(gravity, gravity, deltaTime);
             particle.updatePos(deltaTime);
-            particle.DrawCircle(VAO, posLocation, static_cast<int>(vertices.size() / 2));
-        
-            if (particle.position[0] < -0.9f) {
-                particle.position[0] = -0.9f;
-                particle.velocity[0] *= -0.95;
-            } else if (particle.position[0] > 0.9f) {
-                particle.position[0] = 0.9f;
-                particle.velocity[0] *= -0.95f;
-            }
+            particle.handleCollisions();
+            particle.drawCircle(VAO, posLocation, radiusLocation, static_cast<int>(vertices.size() / 2));
+        }
 
-             if (particle.position[1] < -0.9f) {
-                particle.position[1] = -0.9f;
-                particle.velocity[1] *= -0.95;
-            } else if (particle.position[1] > 0.9f) {
-                particle.position[1] = 0.9f;
-                particle.velocity[1] *= -0.95f;
+        for (int i = 0; i < particles.size(); i++) {
+            for (int j = i + 1; j < particles.size(); j++) {
+                if (particles[i].isColliding(particles[j])) {
+                    particles[i].vx *= particles[i].restitution;
+                    particles[i].vy *= particles[i].restitution;
+                    particles[j].vx *= particles[j].restitution;
+                    particles[j].vy *= particles[j].restitution;
+                }
             }
         }
 
@@ -132,7 +165,6 @@ int main() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
 
     //shader destruction
     glDeleteVertexArrays(1, &VAO);
@@ -292,10 +324,12 @@ std::pair<const char*, const char*> GetShaderSources() {
     layout (location = 0) in vec2 aPos;
 
     uniform vec2 uPosition;
+    uniform float uRadius;
 
     void main()
     {
-        gl_Position = vec4(aPos + uPosition, 0.0, 1.0);
+        vec2 scaledPosition = aPos * uRadius;
+        gl_Position = vec4(scaledPosition + uPosition, 0.0, 1.0);
     }
     )";
 
@@ -336,15 +370,3 @@ std::vector<float> CreateCircle(float centerX, float centerY, float radius, int 
 
     return vertices;
 }
-
-//draw circle from center x and y
-void DrawCircle(GLuint& VAO, GLint& positionLocation, float x, float y, int vertexCount) {
-
-    //send position to the vertex shader
-    glUniform2f(positionLocation, x, y);
-
-    //draw circle
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
-}
-
