@@ -11,51 +11,116 @@
 // ****** FUNCTION & CLASS DECLARATIONS ****** //
 
 class Particle;
+struct Vec2;
 GLFWwindow* InitWindow();
 GLuint InitShaderProgram(const char* vertexSource, const char* fragmentSource);
 void InitVAOVBO(GLuint& VAO, GLuint& VBO, const float* vertices, size_t vertexCount);
 std::pair<const char*, const char*> GetShaderSources();
 std::vector<float> CreateCircle(float centerX, float centerY, float radius, int res);
 void handleCollision(Particle& a, Particle& b);
+constexpr float FIXED_DT = 1.0f / 120.0f;
 
-// ****** CLASS IMPLEMENTATIONS ****** //
+// ****** CLASS & STRUCt IMPLEMENTATIONS ****** //
+
+struct Vec2 {
+    float x = 0.0f;
+    float y = 0.0f;
+
+    Vec2() = default;
+
+    Vec2(float x, float y) {
+        this->x = x;
+        this->y = y;
+    }
+
+    Vec2 operator+(const Vec2& other) const {
+        return {x + other.x, y + other.y};
+    }
+
+    Vec2 operator-(const Vec2& other) const {
+        return {x - other.x, y - other.y};
+    }
+
+    Vec2 operator*(float scaler) const {
+        return {x * scaler, y * scaler};
+    }
+
+    Vec2 operator/(float scaler) const {
+        return {x / scaler, y / scaler};
+    }
+
+    Vec2& operator+=(const Vec2& other) {
+        x += other.x;
+        y += other.y;
+        return *this;
+    }
+
+    Vec2& operator-=(const Vec2& other) {
+        x -= other.x;
+        y -= other.y;
+        return *this;
+    }
+
+    Vec2& operator*=(float scaler) {
+        x *= scaler;
+        y *= scaler;
+        return *this;
+    }
+
+    float dot(const Vec2& other) const {
+        return x * other.x + y * other.y;
+    }
+
+    float lengthSquared() const {
+        return x * x + y * y;
+    }
+
+    float length() const {
+        return std::sqrt(lengthSquared());
+    }
+
+    Vec2 normalized() const {
+        float len = length();
+
+        if (len < 0.0001f) {
+            return {0.0f, 0.0f};
+        }
+
+        return *this / len;
+    }
+};
 
 class Particle {
 
 public:
-    float x, y;
-    float vx, vy;
-    float radius, diameter;
+    Vec2 pos;
+    Vec2 v;
+    float radius;
     float restitution = 0.95f;
     float density, mass;
 
 
     Particle(float x, float y, float vx, float vy, float radius, float density = 1.0f) {
-        this->x = x;
-        this->y = y;
-        this->vx = vx;
-        this->vy = vy;
+        this->pos = Vec2(x, y);
+        this->v = Vec2(vx, vy);
         this->radius = radius;
-        this->diameter = radius * 2;
         this->density = density;
 
         this->mass = density * 3.14159265 * radius * radius;
     }
 
-    void accelerate(float x, float y, float deltaTime) {
-        this->vx += x * deltaTime;
-        this->vy += y * deltaTime;
+    void accelerate(const Vec2& acc) {
+        v += acc * FIXED_DT;
     }
 
-    void updatePos(float deltaTime) {
-        this->x += vx * deltaTime;
-        this->y += vy * deltaTime;
+    void updatePos() {
+        pos += v * FIXED_DT;
     }
 
     void drawCircle(GLuint& VAO, GLint& positionLocation, GLint& radiusLocation, int vertexCount) {
 
         //send position to the vertex shader
-        glUniform2f(positionLocation, x, y);
+        glUniform2f(positionLocation, pos.x, pos.y);
         glUniform1f(radiusLocation, radius);
 
         //draw circle
@@ -68,40 +133,48 @@ public:
         float min_boundry = -1.0f + radius;
         float max_boundry = 1.0f - radius;
 
-        if (x < min_boundry) {
-            vx *= -restitution;
-            x = min_boundry;
-        } else if (x > max_boundry) {
-            vx *= -restitution;
-            x = max_boundry;
+        if (pos.x < min_boundry) {
+            pos.x = min_boundry;
+
+            if (v.x < 0.0f) {
+                v.x  *= -restitution;
+            }
+        } else if (pos.x > max_boundry) {
+            pos.x = max_boundry;
+
+            if (v.x  > 0.0f) {
+                v.x  *= -restitution;
+            }
         }
-        if (y < min_boundry) {
-            vy *= -restitution;
-            y = min_boundry;
-        } else if (y > max_boundry) {
-            vy *= -restitution;
-            y = max_boundry;
+        if (pos.y < min_boundry) {
+            pos.y = min_boundry;
+
+            if (v.y < 0.0f) {
+                v.y *= -restitution;
+            }
+        } else if (pos.y > max_boundry) {
+            pos.y = max_boundry;
+
+            if (v.y > 0.0f) {
+                v.y *= -restitution;
+            }
         }
     }
 
     //checks if 2 circles are colliding
-    bool isColliding(const Particle& otherParticle) {
-        float dx = x - otherParticle.x;
-        float dy = y - otherParticle.y;
-
-        float dist = dx * dx + dy * dy;
+    bool isColliding(const Particle& otherParticle) const {
+        Vec2 diff = pos - otherParticle.pos;
         float rDist = radius + otherParticle.radius;
 
-        return dist <= rDist * rDist;
+        return diff.lengthSquared() <= rDist * rDist;
     }
 
     //applys a force to current object
-    void applyForce(float fx, float fy, float deltaTime) {
-        float ax = fx / mass;
-        float ay = fy / mass;
+    void applyForce(const Vec2& force) {
 
-        vx = ax * deltaTime;
-        vy = ay * deltaTime;
+        Vec2 acceleartion = force / mass;
+        v += acceleartion * FIXED_DT;
+        
     }
 };
 
@@ -112,13 +185,14 @@ int main() {
     //init the window and shaderProgram
     GLFWwindow* window = InitWindow();
 
-    //get screenHeight and Width
-    int screenHeight, screenWidth;
-    glfwGetWindowSize(window, &screenWidth, &screenHeight);
-
+    //make sure window is created
     if (!window) {
         return -1;
     }
+
+    //get screenHeight and Width --> unusedff
+    // int screenHeight, screenWidth;
+    // glfwGetWindowSize(window, &screenWidth, &screenHeight);
 
     auto [vertexShaderSource, fragmentShaderSource] = GetShaderSources();
     GLuint shaderProgram = InitShaderProgram(vertexShaderSource, fragmentShaderSource);
@@ -139,8 +213,8 @@ int main() {
     GLuint VAO, VBO;
     InitVAOVBO(VAO, VBO, vertices.data(), vertices.size() / 2);
 
-    float lastTime = static_cast<float>(glfwGetTime());
-    float currentTime, deltaTime;
+    float accumulator = 0.0f;
+    float lastTime = glfwGetTime();
     float gravity = -1.5f;
 
     std::vector<Particle> particles = {
@@ -152,29 +226,36 @@ int main() {
     //main loop
     while (!glfwWindowShouldClose(window)) {
 
-        //calculate delta time and replace current time
-        currentTime = static_cast<float>(glfwGetTime());
-        deltaTime = currentTime - lastTime;
+        float currentTime = glfwGetTime();
+        float frameTime = currentTime - lastTime;
         lastTime = currentTime;
+
+        frameTime = std::min(frameTime, 0.25f);
+        accumulator += frameTime;
+
+        //physics updates
+        while (accumulator >= FIXED_DT) {
+
+            for (auto& particle : particles) {
+                particle.accelerate(Vec2(gravity, gravity));
+                particle.updatePos();
+                particle.handleCollisions();
+            }
+
+            for (size_t i = 0; i < particles.size(); i++) {
+                for (size_t j = i + 1; j < particles.size(); j++) {
+                    if (particles[i].isColliding(particles[j])) {
+                        handleCollision(particles[i], particles[j]);
+                    }
+                }
+            }
+            accumulator -= FIXED_DT;
+        }
 
         glClear(GL_COLOR_BUFFER_BIT);
 
         for (auto& particle : particles) {
-            particle.accelerate(gravity, gravity, deltaTime);
-            particle.updatePos(deltaTime);
-        }
-
-        for (int i = 0; i < particles.size(); i++) {
-            for (int j = i + 1; j < particles.size(); j++) {
-                if (particles[i].isColliding(particles[j])) {
-                    handleCollision(particles[i], particles[j]);
-                }
-            }
-        }
-
-        for (auto& particle : particles) {
-            particle.handleCollisions();
-            particle.drawCircle(VAO, posLocation, radiusLocation, static_cast<int>(vertices.size() / 2));
+                particle.drawCircle(VAO, posLocation, radiusLocation, static_cast<int>(vertices.size() / 2));
         }
 
         //swap buffers and see if there are any event updates
@@ -390,34 +471,30 @@ std::vector<float> CreateCircle(float centerX, float centerY, float radius, int 
 }
 
 void handleCollision(Particle& a, Particle& b) {
-    float dx = b.x - a.x;
-    float dy = b.y - a.y;
+    Vec2 d = b.pos - a .pos;
 
-    float dist = std::sqrt(dx * dx + dy * dy);
+    float dist = d.length();
     float rSum = a.radius + b.radius;
 
     if (dist >= rSum) {
         return;
     }
 
-    float nx, ny;
+    Vec2 normal;
 
-    if (dist > 0.000000001f) {
-        nx = dx / dist;
-        ny = dy / dist;
+    if (dist > 0.00001f) {
+        normal = d / dist;
     } else {
-        nx = 1.0f;
-        ny = 0.0f;
+        normal = {1.0f, 0.0f};
         dist = 0.0f;
     }
 
-    float rvx = b.vx - a.vx;
-    float rvy = b.vy - a.vy;
+    Vec2 rv = b.v - a.v;
 
     float invMassA = 1.0f / a.mass;
     float invMassB = 1.0f / b.mass;
 
-    float velocityAlongNormal = rvx * nx + rvy * ny;
+    float velocityAlongNormal = rv.dot(normal);
 
     float e = std::min(a.restitution, b.restitution);
 
@@ -426,14 +503,10 @@ void handleCollision(Particle& a, Particle& b) {
         * velocityAlongNormal 
         / (invMassA + invMassB);
 
-        float impulseX = nx * impulse;
-        float impulseY = ny * impulse;
+        Vec2 impulseVec = normal * impulse;
 
-        a.vx -= impulseX * invMassA;
-        a.vy -= impulseY * invMassA;
-
-        b.vx += impulseX * invMassB;
-        b.vy += impulseY * invMassB;
+        a.v -= impulseVec * invMassA;
+        b.v += impulseVec * invMassB;
     }
 
     float pen = rSum - dist;
@@ -441,11 +514,8 @@ void handleCollision(Particle& a, Particle& b) {
     if (pen > 0.0f) {
         float correction = pen / (invMassA + invMassB);
 
-        a.x -= correction * invMassA * nx;
-        a.y -= correction * invMassA * ny;
-
-        b.x += correction * invMassB * nx;
-        b.y += correction * invMassB * ny;
+        a.pos -= normal * invMassA * correction;
+        b.pos += normal * invMassB * correction;
     }
 
 }
