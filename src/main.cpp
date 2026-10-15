@@ -18,6 +18,7 @@ void InitVAOVBO(GLuint& VAO, GLuint& VBO, const float* vertices, size_t vertexCo
 std::pair<const char*, const char*> GetShaderSources();
 std::vector<float> CreateCircle(float centerX, float centerY, float radius, int res);
 void handleCollision(Particle& a, Particle& b);
+void applyGravity(Particle& a, Particle& b);
 constexpr float FIXED_DT = 1.0f / 120.0f;
 
 // ****** CLASS & STRUCt IMPLEMENTATIONS ****** //
@@ -218,9 +219,9 @@ int main() {
     float gravity = -1.5f;
 
     std::vector<Particle> particles = {
-        Particle(0.3f, 0.75f, 0.0f, 0.0f, 0.1f),
-        Particle(-0.3f, 0.35f, 0.0f, 0.0f, 0.05f),
-        Particle(0.83f, -0.1f, 0.0f, 0.0f, 0.15f)
+        Particle(0.3f, 0.75f, 0.4f, 0.1f, 0.03f),
+        Particle(-0.3f, 0.35f, 0.5f, -0.2f, 0.05f),
+        Particle(0.83f, -0.1f, -0.1f, 0.6f, 0.05f)
     };
 
     //main loop
@@ -236,12 +237,20 @@ int main() {
         //physics updates
         while (accumulator >= FIXED_DT) {
 
+            //apply gravity
+            for (size_t i = 0; i < particles.size(); i++) {
+                for (size_t j = i + 1; j < particles.size(); j++) {
+                    applyGravity(particles[i], particles[j]);
+                }
+            }
+
+            //update positions
             for (auto& particle : particles) {
-                particle.accelerate(Vec2(gravity, gravity));
                 particle.updatePos();
                 particle.handleCollisions();
             }
 
+            //handle paticle collisions
             for (size_t i = 0; i < particles.size(); i++) {
                 for (size_t j = i + 1; j < particles.size(); j++) {
                     if (particles[i].isColliding(particles[j])) {
@@ -518,4 +527,22 @@ void handleCollision(Particle& a, Particle& b) {
         b.pos += normal * invMassB * correction;
     }
 
+}
+
+void applyGravity(Particle& a, Particle& b) {
+    constexpr float G = 10.0f;
+    constexpr float SOFTENING = 0.02f;
+
+    Vec2 direction = b.pos - a.pos;
+
+    float distSq = direction.lengthSquared() + SOFTENING * SOFTENING;
+
+    float invDist = 1.0f / std::sqrt(distSq);
+
+    float forceMagnitude = G * a.mass * b.mass * invDist * invDist * invDist;
+
+    Vec2 force = direction * forceMagnitude;
+
+    a.applyForce(force);
+    b.applyForce(force * -1.0f);
 }
