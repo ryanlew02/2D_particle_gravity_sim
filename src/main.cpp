@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <vector>
 #include <algorithm>
+#include <random>
 
 // ****** FUNCTION & CLASS DECLARATIONS ****** //
 
@@ -17,6 +18,7 @@ GLuint InitShaderProgram(const char* vertexSource, const char* fragmentSource);
 void InitVAOVBO(GLuint& VAO, GLuint& VBO, const float* vertices, size_t vertexCount);
 std::pair<const char*, const char*> GetShaderSources();
 std::vector<float> CreateCircle(float centerX, float centerY, float radius, int res);
+void drawCircle(const Particle& particle, const GLuint& VAO, const GLint& positionLocation, const GLint& radiusLocation, const int vertexCount);
 void handleCollision(Particle& a, Particle& b);
 void applyGravity(Particle& a, Particle& b);
 constexpr float FIXED_DT = 1.0f / 120.0f;
@@ -62,25 +64,35 @@ struct Vec2 {
         return *this;
     }
 
-    Vec2& operator*=(float scaler) {
+    Vec2& operator*=(const float scaler) {
         x *= scaler;
         y *= scaler;
         return *this;
     }
 
-    float dot(const Vec2& other) const {
+    Vec2& operator/=(const float scaler) {
+        x /= scaler;
+        y /= scaler;
+        return *this;
+    }
+
+    Vec2 operator-() const {
+        return {-x, -y};
+    }
+
+    [[nodiscard]] float dot(const Vec2& other) const {
         return x * other.x + y * other.y;
     }
 
-    float lengthSquared() const {
+    [[nodiscard]] float lengthSquared() const {
         return x * x + y * y;
     }
 
-    float length() const {
+    [[nodiscard]] float length() const {
         return std::sqrt(lengthSquared());
     }
 
-    Vec2 normalized() const {
+    [[nodiscard]] Vec2 normalized() const {
         float len = length();
 
         if (len < 0.0001f) {
@@ -101,14 +113,8 @@ public:
     float density, mass;
 
 
-    Particle(float x, float y, float vx, float vy, float radius, float density = 1.0f) {
-        this->pos = Vec2(x, y);
-        this->v = Vec2(vx, vy);
-        this->radius = radius;
-        this->density = density;
-
-        this->mass = density * 3.14159265 * radius * radius;
-    }
+    Particle(const float x, const float y, float vx, float vy, float radius, float density = 1.0f)
+    : pos(x, y), v(x, y), radius(radius), density(density), mass(density * 3.14159265 * radius * radius) {}
 
     void accelerate(const Vec2& acc) {
         v += acc * FIXED_DT;
@@ -116,17 +122,6 @@ public:
 
     void updatePos() {
         pos += v * FIXED_DT;
-    }
-
-    void drawCircle(GLuint& VAO, GLint& positionLocation, GLint& radiusLocation, int vertexCount) {
-
-        //send position to the vertex shader
-        glUniform2f(positionLocation, pos.x, pos.y);
-        glUniform1f(radiusLocation, radius);
-
-        //draw circle
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
     }
 
     void handleCollisions() {
@@ -163,18 +158,18 @@ public:
     }
 
     //checks if 2 circles are colliding
-    bool isColliding(const Particle& otherParticle) const {
+    [[nodiscard]] bool isColliding(const Particle& otherParticle) const {
         Vec2 diff = pos - otherParticle.pos;
         float rDist = radius + otherParticle.radius;
 
         return diff.lengthSquared() <= rDist * rDist;
     }
 
-    //applys a force to current object
+    //apply's a force to current object
     void applyForce(const Vec2& force) {
 
-        Vec2 acceleartion = force / mass;
-        v += acceleartion * FIXED_DT;
+        Vec2 acceleration = force / mass;
+        v += acceleration * FIXED_DT;
         
     }
 };
@@ -191,7 +186,7 @@ int main() {
         return -1;
     }
 
-    //get screenHeight and Width --> unusedff
+    //get screenHeight and Width --> unused
     // int screenHeight, screenWidth;
     // glfwGetWindowSize(window, &screenWidth, &screenHeight);
 
@@ -208,30 +203,45 @@ int main() {
     //tell OpenGL which shader program we want to use
     glUseProgram(shaderProgram);
 
-    std::vector<float> vertices = CreateCircle(0.0f, 0.0f, 1.0f, 64);
+    const std::vector<float> vertices = CreateCircle(0.0f, 0.0f, 1.0f, 64);
 
     //create reference containers for the vertex array object and the vertex buffer object
     GLuint VAO, VBO;
     InitVAOVBO(VAO, VBO, vertices.data(), vertices.size() / 2);
 
-    float accumulator = 0.0f;
-    float lastTime = glfwGetTime();
-    float gravity = -1.5f;
+    double accumulator = 0.0;
+    double lastTime = glfwGetTime();
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
+    std::uniform_real_distribution<float> dis2(1.0f, 5.0f);
 
     std::vector<Particle> particles = {
-        Particle(0.3f, 0.75f, 0.4f, 0.1f, 0.03f),
-        Particle(-0.3f, 0.35f, 0.5f, -0.2f, 0.05f),
-        Particle(0.83f, -0.1f, -0.1f, 0.6f, 0.05f)
+        Particle(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.06f),
+        Particle(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.06f),
+        Particle(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.06f),
+        Particle(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.06f),
+        Particle(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.06f),
+        Particle(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.06f),
+        Particle(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.06f),
+        Particle(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.06f),
+        Particle(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.06f),
+        Particle(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.06f),
+        Particle(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.06f),
+        Particle(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.06f),
+        Particle(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.06f)
+
     };
 
     //main loop
     while (!glfwWindowShouldClose(window)) {
 
-        float currentTime = glfwGetTime();
-        float frameTime = currentTime - lastTime;
+        const double currentTime = glfwGetTime();
+        double frameTime = currentTime - lastTime;
         lastTime = currentTime;
 
-        frameTime = std::min(frameTime, 0.25f);
+        frameTime = std::min(frameTime, 0.25);
         accumulator += frameTime;
 
         //physics updates
@@ -247,10 +257,9 @@ int main() {
             //update positions
             for (auto& particle : particles) {
                 particle.updatePos();
-                particle.handleCollisions();
             }
 
-            //handle paticle collisions
+            //handle particle collisions
             for (size_t i = 0; i < particles.size(); i++) {
                 for (size_t j = i + 1; j < particles.size(); j++) {
                     if (particles[i].isColliding(particles[j])) {
@@ -258,13 +267,18 @@ int main() {
                     }
                 }
             }
+
+            for (auto& particle : particles) {
+                particle.handleCollisions();
+            }
+
             accumulator -= FIXED_DT;
         }
 
         glClear(GL_COLOR_BUFFER_BIT);
 
         for (auto& particle : particles) {
-                particle.drawCircle(VAO, posLocation, radiusLocation, static_cast<int>(vertices.size() / 2));
+                drawCircle(particle, VAO, posLocation, radiusLocation, static_cast<int>(vertices.size() / 2));
         }
 
         //swap buffers and see if there are any event updates
@@ -326,6 +340,7 @@ GLFWwindow* InitWindow() {
     int version = gladLoadGL((GLADloadfunc)glfwGetProcAddress);
     if (version == 0) {
         std::cerr << "Failed to initialize GLAD\n";
+        glfwDestroyWindow(window);
         glfwTerminate();
         return nullptr;
     }
@@ -349,7 +364,7 @@ GLuint InitShaderProgram(const char* vertexSource, const char* fragmentSource) {
     //create shader object and get reference
     GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     //attach vertex shader source to the vertex shader object
-    glShaderSource(vertexShader, 1, &vertexSource, NULL);
+    glShaderSource(vertexShader, 1, &vertexSource, nullptr);
     //compile vertex shader into machine code
     glCompileShader(vertexShader);
 
@@ -357,21 +372,21 @@ GLuint InitShaderProgram(const char* vertexSource, const char* fragmentSource) {
     glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
     if (!success) {
         char infoLog[512];
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+        glGetShaderInfoLog(vertexShader, 512, nullptr, infoLog);
         std::cerr << "Vertex shader compilation failed: " << infoLog << std::endl;
     }
 
     //create fragment object and get reference
     GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
     //attach fragment shader source to the fragment shader object
-    glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
+    glShaderSource(fragmentShader, 1, &fragmentSource, nullptr);
     //compile fragment shader into machine code
     glCompileShader(fragmentShader);
 
     glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
     if (!success) {
         char infoLog[512];
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+        glGetShaderInfoLog(fragmentShader, 512, nullptr, infoLog);
         std::cerr << "Fragment shader compilation failed: " << infoLog << std::endl;
     }
 
@@ -387,7 +402,7 @@ GLuint InitShaderProgram(const char* vertexSource, const char* fragmentSource) {
     glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
     if (!success) {
         char infoLog[512];
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+        glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
         std::cerr << "Shader program linking failed: " << infoLog << std::endl;
     }
 
@@ -414,11 +429,11 @@ void InitVAOVBO(GLuint& VAO, GLuint& VBO, const float* vertices, size_t vertexCo
     glBufferData(GL_ARRAY_BUFFER, vertexCount * 2 * sizeof(float), vertices, GL_STATIC_DRAW);
 
     //configure the vertex attribute so OpenGL knows how to read the VBO
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), static_cast<void *>(nullptr));
     //enable the vertex attribute so OpenGL knows how to use it
     glEnableVertexAttribArray(0);
     
-    //bind both the VBO and VAO to 0 so we don't accedentally modify them
+    //bind both the VBO and VAO to 0 so we don't accidentally modify them
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
@@ -456,7 +471,7 @@ std::pair<const char*, const char*> GetShaderSources() {
 }
 
 //create circle with center, radius, and resolution
-std::vector<float> CreateCircle(float centerX, float centerY, float radius, int res) {
+std::vector<float> CreateCircle(const float centerX, const float centerY, const float radius, const int res) {
 
     std::vector<float> vertices;
 
@@ -466,8 +481,8 @@ std::vector<float> CreateCircle(float centerX, float centerY, float radius, int 
     vertices.push_back(centerY);
 
     for (int i = 0; i <= res; i++) {
-        
-        float angle = 2.0f * 3.1415926535 * i / res;
+
+        const float angle = 2.0f * 3.1415926535 * i / res;
 
         float x = centerX + radius * std::cos(angle);
         float y = centerY + radius * std::sin(angle);
@@ -479,11 +494,22 @@ std::vector<float> CreateCircle(float centerX, float centerY, float radius, int 
     return vertices;
 }
 
+void drawCircle(const Particle& particle, const GLuint& VAO, const GLint& positionLocation, const GLint& radiusLocation, const int vertexCount) {
+
+    //send position to the vertex shader
+    glUniform2f(positionLocation, particle.pos.x, particle.pos.y);
+    glUniform1f(radiusLocation, particle.radius);
+
+    //draw circle
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
+}
+
 void handleCollision(Particle& a, Particle& b) {
-    Vec2 d = b.pos - a .pos;
+    const Vec2 d = b.pos - a .pos;
 
     float dist = d.length();
-    float rSum = a.radius + b.radius;
+    const float rSum = a.radius + b.radius;
 
     if (dist >= rSum) {
         return;
@@ -500,15 +526,15 @@ void handleCollision(Particle& a, Particle& b) {
 
     Vec2 rv = b.v - a.v;
 
-    float invMassA = 1.0f / a.mass;
-    float invMassB = 1.0f / b.mass;
+    const float invMassA = 1.0f / a.mass;
+    const float invMassB = 1.0f / b.mass;
 
-    float velocityAlongNormal = rv.dot(normal);
+    const float velocityAlongNormal = rv.dot(normal);
 
-    float e = std::min(a.restitution, b.restitution);
+    const float e = std::min(a.restitution, b.restitution);
 
     if (velocityAlongNormal < 0.0f) {
-        float impulse = -(1.0f + e) 
+        const float impulse = -(1.0f + e)
         * velocityAlongNormal 
         / (invMassA + invMassB);
 
@@ -521,7 +547,7 @@ void handleCollision(Particle& a, Particle& b) {
     float pen = rSum - dist;
 
     if (pen > 0.0f) {
-        float correction = pen / (invMassA + invMassB);
+        const float correction = pen / (invMassA + invMassB);
 
         a.pos -= normal * invMassA * correction;
         b.pos += normal * invMassB * correction;
@@ -530,19 +556,19 @@ void handleCollision(Particle& a, Particle& b) {
 }
 
 void applyGravity(Particle& a, Particle& b) {
-    constexpr float G = 10.0f;
+    constexpr float G = 5.0f;
     constexpr float SOFTENING = 0.02f;
 
-    Vec2 direction = b.pos - a.pos;
+    const Vec2 direction = b.pos - a.pos;
 
-    float distSq = direction.lengthSquared() + SOFTENING * SOFTENING;
+    const float distSq = direction.lengthSquared() + SOFTENING * SOFTENING;
 
-    float invDist = 1.0f / std::sqrt(distSq);
+    const float invDist = 1.0f / std::sqrt(distSq);
 
-    float forceMagnitude = G * a.mass * b.mass * invDist * invDist * invDist;
+    const float forceMagnitude = G * a.mass * b.mass * invDist * invDist * invDist;
 
-    Vec2 force = direction * forceMagnitude;
+    const Vec2 force = direction * forceMagnitude;
 
     a.applyForce(force);
-    b.applyForce(force * -1.0f);
+    b.applyForce(-force);
 }
