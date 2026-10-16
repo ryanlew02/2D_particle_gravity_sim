@@ -12,6 +12,16 @@ find_package(OpenGL REQUIRED)
 add_executable(simulation
     src/main.cpp
     src/gl.c
+        include/Vec2.h
+        include/Particle.h
+        src/Particle.cpp
+        src/Physics.cpp
+        include/Physics.h
+        include/Constants.h
+        src/Renderer.cpp
+        include/Renderer.h
+        include/Window.h
+        src/Window.cpp
 )
 
 target_include_directories(simulation PRIVATE
