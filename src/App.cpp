@@ -1,10 +1,14 @@
 #include "App.h"
 
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 #include "Constants.h"
 #include "Physics.h"
 #include "Renderer.h"
 
 App::App() : window(800, 800, "Physics Simulation") {
+
+    Renderer renderer;
 
 
     if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress)) {
@@ -72,7 +76,7 @@ void App::run() {
         render();
 
         //swap buffers and see if there are any event updates
-        glfwSwapBuffers(window);
+        glfwSwapBuffers(window.getWindow());
         glfwPollEvents();
     }
 
@@ -117,7 +121,7 @@ void App::render() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     for (auto& particle : particles) {
-        drawCircle(particle, VAO, posLocation, radiusLocation, static_cast<int>(vertices.size() / 2));
+        renderer.drawCircle(particle);
     }
 
 }

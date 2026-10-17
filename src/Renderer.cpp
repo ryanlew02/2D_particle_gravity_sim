@@ -6,8 +6,56 @@
 #include <vector>
 #include <random>
 
+Renderer::Renderer() {
+
+    //get shader sources
+    auto [vertexShaderSource, fragmentShaderSource] = Renderer::GetShaderSources();
+
+    //compile shaders and create program
+    shaderProgram = Renderer::InitShaderProgram(vertexShaderSource, fragmentShaderSource);
+
+    //get uniform locations
+    posLocation = glGetUniformLocation(shaderProgram, "uPosition");
+    radiusLocation = glGetUniformLocation(shaderProgram, "uRadius");
+
+    if (posLocation == -1 || radiusLocation == -1) {
+        throw std::runtime_error("Could not find position location");
+    }
+
+    //tell OpenGL which shader program we want to use
+    glUseProgram(shaderProgram);
+
+    const std::vector<float> vertices = CreateCircle(0.0f, 0.0f, 1.0f, 64);
+
+    vertexCount = vertices.size() / 2;
+
+    Renderer::InitVAOVBO(VAO, VBO, vertices.data(), vertexCount);
+}
+
+Renderer::~Renderer() {
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+    glDeleteProgram(shaderProgram);
+}
+
+void Renderer::clear() {
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void Renderer::drawCircle(const Particle& particle) const {
+    glUseProgram(shaderProgram);
+
+    //send position to the vertex shader
+    glUniform2f(posLocation, particle.pos.x, particle.pos.y);
+    glUniform1f(radiusLocation, particle.radius);
+
+    //draw circle
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
+}
+
 //create shader program
-GLuint InitShaderProgram(const char* vertexSource, const char* fragmentSource) {
+GLuint Renderer::InitShaderProgram(const char* vertexSource, const char* fragmentSource) {
 
     //create shader object and get reference
     const GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -63,7 +111,7 @@ GLuint InitShaderProgram(const char* vertexSource, const char* fragmentSource) {
 }
 
 //create VAO and VBO
-void InitVAOVBO(GLuint& VAO, GLuint& VBO, const float* vertices, size_t vertexCount) {
+void Renderer::InitVAOVBO(GLuint& VAO, GLuint& VBO, const float* vertices, size_t vertexCount) {
     //generate the vao and vbo with 1 object each
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -87,7 +135,7 @@ void InitVAOVBO(GLuint& VAO, GLuint& VBO, const float* vertices, size_t vertexCo
 }
 
 //get shader source constants
-std::pair<const char*, const char*> GetShaderSources() {
+std::pair<const char*, const char*> Renderer::GetShaderSources() {
 
     //vertex shader source code
     const char* vertexShaderSource = R"(
@@ -119,7 +167,7 @@ std::pair<const char*, const char*> GetShaderSources() {
 }
 
 //create circle with center, radius, and resolution
-std::vector<float> CreateCircle(const float centerX, const float centerY, const float radius, const int res) {
+std::vector<float> Renderer::CreateCircle(const float centerX, const float centerY, const float radius, const int res) {
 
     std::vector<float> vertices;
 
@@ -140,15 +188,4 @@ std::vector<float> CreateCircle(const float centerX, const float centerY, const 
     }
 
     return vertices;
-}
-
-void drawCircle(const Particle& particle, const GLuint& VAO, const GLint& positionLocation, const GLint& radiusLocation, const int vertexCount) {
-
-    //send position to the vertex shader
-    glUniform2f(positionLocation, particle.pos.x, particle.pos.y);
-    glUniform1f(radiusLocation, particle.radius);
-
-    //draw circle
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, vertexCount);
 }
