@@ -2,16 +2,14 @@
 #include "Window.h"
 
 #define GLFW_INCLUDE_NONE
-#include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
 
-GLFWwindow* InitWindow() {
 
-    // Initialize GLFW with checks
+Window::Window(int width, int height, const char* title) {
+
     if (!glfwInit()) {
-        std::cerr << "Failed to initialize GLFW\n";
-        return nullptr;
+        throw std::runtime_error("Failed to initialize GLFW\n");
     }
 
     // macOS OpenGL configuration
@@ -25,45 +23,30 @@ GLFWwindow* InitWindow() {
     // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // Create window
-    GLFWwindow* window = glfwCreateWindow(
-        800, 800, "Physics Simulation", nullptr, nullptr
-    );
-
-    if (!window) {
-        std::cerr << "Failed to create GLFW window\n";
-        glfwTerminate();
-        return nullptr;
-    }
-
-    // Make window's OpenGL context current
     glfwMakeContextCurrent(window);
+}
 
-    // Disable V-Sync
-    glfwSwapInterval(0);
+Window::~Window() {
 
-    // Initialize GLAD
-    int version = gladLoadGL((GLADloadfunc)glfwGetProcAddress);
-
-    if (version == 0) {
-        std::cerr << "Failed to initialize GLAD\n";
+    if (window) {
         glfwDestroyWindow(window);
-        glfwTerminate();
-        return nullptr;
     }
 
-    // Set initial viewport size
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    glViewport(0, 0, width, height);
+    glfwTerminate();
+}
 
-    // Update viewport when window is resized
-    glfwSetFramebufferSizeCallback(
-        window,
-        [](GLFWwindow* window, int width, int height) {
-            glViewport(0, 0, width, height);
-        }
-    );
+bool Window::shouldClose() const {
+    return glfwWindowShouldClose(window);
+}
 
+void Window::swapBuffers() const {
+    glfwSwapBuffers(window);
+}
+
+void Window::pollEvents() const {
+    glfwPollEvents();
+}
+
+GLFWwindow* Window::getWindow() const {
     return window;
 }

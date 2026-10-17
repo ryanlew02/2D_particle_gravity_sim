@@ -22,6 +22,8 @@ add_executable(simulation
         include/Renderer.h
         include/Window.h
         src/Window.cpp
+        src/App.cpp
+        include/App.h
 )
 
 target_include_directories(simulation PRIVATE
