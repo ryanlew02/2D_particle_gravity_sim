@@ -21,11 +21,11 @@ I am always looking for ways to improve my code.
 
 ## Technologies
 
-- **C++17** — Core simulation and physics
-- **OpenGL** — Graphics rendering
-- **GLFW** — Window creation and input handling
-- **GLAD** — OpenGL function loading
-- **CMake** — Build system
+- **C++17** - Core simulation and physics
+- **OpenGL** - Graphics rendering
+- **GLFW** - Window creation and input handling
+- **GLAD** - OpenGL function loading
+- **CMake** - Build system
 
 ## Physics
 
