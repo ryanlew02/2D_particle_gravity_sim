@@ -1,42 +1,13 @@
 #include "App.h"
 
 #define GLFW_INCLUDE_NONE
+#include <stdexcept>
 #include <GLFW/glfw3.h>
 #include "Constants.h"
 #include "Physics.h"
 #include "Renderer.h"
 
 App::App() : window(800, 800, "Physics Simulation") {
-
-    Renderer renderer;
-
-
-    if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress)) {
-        throw std::runtime_error("Failed to initialize GLAD\n");
-    }
-
-    auto [vertexShaderSource, fragmentShaderSource] = GetShaderSources();
-
-    GLuint shaderProgram = InitShaderProgram(vertexShaderSource, fragmentShaderSource);
-
-    GLint posLocation = glGetUniformLocation(shaderProgram, "uPosition");
-    GLint radiusLocation = glGetUniformLocation(shaderProgram, "uRadius");
-
-    if (posLocation == -1) {
-        throw std::runtime_error("Could not find position location");
-    }
-
-    //tell OpenGL which shader program we want to use
-    glUseProgram(shaderProgram);
-
-    const std::vector<float> vertices = CreateCircle(0.0f, 0.0f, 1.0f, 64);
-
-    //create reference containers for the vertex array object and the vertex buffer object
-    GLuint VAO, VBO;
-
-    size_t vertexCount = vertices.size() / 2;
-
-    InitVAOVBO(VAO, VBO, vertices.data(), vertexCount);
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -51,6 +22,12 @@ App::App() : window(800, 800, "Physics Simulation") {
 }
 
 void App::run() {
+
+    if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress)) {
+        throw std::runtime_error("Failed to initialize GLAD\n");
+    }
+
+    Renderer renderer;
 
     double lastTime = glfwGetTime();
     double accumulator = 0.0;

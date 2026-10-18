@@ -1,6 +1,5 @@
-#pragma once
-#include <Particle.h>
-#include <Constants.h>
+#include "Particle.h"
+#include "Constants.h"
 
 Particle::Particle(const float x, const float y, float vx, float vy, float radius, float density)
     : pos(x, y), v(vx, vy), radius(radius), density(density), mass(density * 3.14159265 * radius * radius) {}
@@ -9,7 +8,7 @@ void Particle::accelerate(const Vec2& acc) {
     v += acc * FIXED_DT;
 }
 
-void Particle::updatePos() {
+void Particle::updatePos() { 
     pos += v * FIXED_DT;
 }
 

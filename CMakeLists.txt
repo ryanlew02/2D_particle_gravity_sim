@@ -6,7 +6,15 @@ project(ParticleGravitySim LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(glfw3 REQUIRED)
+include(FetchContent)
+
+FetchContent_Declare(
+        glfw
+        GIT_REPOSITORY https://github.com/glfw/glfw.git
+        GIT_TAG 3.4
+)
+
+FetchContent_MakeAvailable(glfw)
 find_package(OpenGL REQUIRED)
 
 add_executable(simulation

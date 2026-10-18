@@ -37,5 +37,5 @@ public:
     static std::pair<const char*, const char*> GetShaderSources();
 
     //create circle with center, radius, and resolution
-    static std::vector<float> CreateCircle(const float centerX, const float centerY, const float radius, const int res) const;
+    static std::vector<float> CreateCircle(const float centerX, const float centerY, const float radius, const int res);
 };
