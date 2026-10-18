@@ -20,7 +20,7 @@ public:
 
     void updatePos();
 
-    void handleCollisions();
+    void handleCollisionsWithWalls();
 
     //checks if 2 circles are colliding
     [[nodiscard]] bool isColliding(const Particle& otherParticle) const;

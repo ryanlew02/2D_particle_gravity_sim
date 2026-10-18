@@ -37,10 +37,12 @@ App::App() : window(800, 800, "Physics Simulation") {
 
 void App::run() {
 
+    //load gl and make sure it initialized
     if (!gladLoadGL((GLADloadfunc)glfwGetProcAddress)) {
         throw std::runtime_error("Failed to initialize GLAD\n");
     }
 
+    //set up vars for calculating time
     double fpsTimer = glfwGetTime();
     int frameCount = 0;
     double lastTime = glfwGetTime();
@@ -55,6 +57,7 @@ void App::run() {
         double frameTime = currentTime - lastTime;
         double elapsed = currentTime - fpsTimer;
 
+        //set fps title
         if (elapsed >= 1.0) {
             double fps = frameCount / elapsed;
 
@@ -78,20 +81,13 @@ void App::run() {
         }
 
         handleInput();
-
         render();
 
         //swap buffers and see if there are any event updates
         window.swapBuffers();
         window.pollEvents();
     }
-
-
-
-
 }
-
-
 
 void App::update() {
 
@@ -125,8 +121,9 @@ void App::update() {
         }
     }
 
+    //handles collisions with walls
     // for (auto& particle : particles) {
-    //     particle.handleCollisions();
+    //     particle.handleCollisionsWithWalls();
     // }
 
 }
@@ -164,5 +161,7 @@ void App::handleInput() {
             std::array<float, 3>{0.3f, 0.8f, 1.0f}
         );
     }
+
     wasMousePressed = pressed;
+
 }

@@ -19,7 +19,7 @@ Renderer::Renderer() {
     radiusLocation = glGetUniformLocation(shaderProgram, "uRadius");
     colorLocation = glGetUniformLocation(shaderProgram, "uColor");
 
-    if (posLocation == -1 || radiusLocation == -1) {
+    if (posLocation == -1 || radiusLocation == -1 || colorLocation == -1) {
         throw std::runtime_error("Could not find position location");
     }
 
@@ -33,6 +33,7 @@ Renderer::Renderer() {
     Renderer::InitVAOVBO(VAO, VBO, vertices.data(), vertexCount);
 }
 
+//clean up for renderer
 Renderer::~Renderer() {
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
@@ -43,6 +44,7 @@ void Renderer::clear() {
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
+//draw a circle
 void Renderer::drawCircle(const Particle& particle) const {
     glUseProgram(shaderProgram);
 

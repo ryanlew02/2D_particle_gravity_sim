@@ -5,7 +5,7 @@
 #include <valarray>
 
 
-
+//handles collision between 2 particles
 void handleCollision(Particle& a, Particle& b) {
     const Vec2 d = b.pos - a .pos;
 
@@ -34,6 +34,7 @@ void handleCollision(Particle& a, Particle& b) {
 
     const float e = std::min(a.restitution, b.restitution);
 
+    //calculate the impulse
     if (velocityAlongNormal < 0.0f) {
         const float impulse = -(1.0f + e)
         * velocityAlongNormal
@@ -56,6 +57,7 @@ void handleCollision(Particle& a, Particle& b) {
 
 }
 
+//applies gravity between 2 particles
 void applyGravity(Particle& a, Particle& b) {
     constexpr float G = 0.6f;
     constexpr float SOFTENING = 0.02f;

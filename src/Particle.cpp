@@ -12,7 +12,8 @@ void Particle::updatePos() {
     pos += v * FIXED_DT;
 }
 
-void Particle::handleCollisions() {
+//this handles collisions with walls
+void Particle::handleCollisionsWithWalls() {
 
     const float min_boundry = -1.0f + radius;
     const float max_boundry = 1.0f - radius;
