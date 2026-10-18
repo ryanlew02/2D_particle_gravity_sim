@@ -27,8 +27,6 @@ void App::run() {
         throw std::runtime_error("Failed to initialize GLAD\n");
     }
 
-    Renderer renderer;
-
     double lastTime = glfwGetTime();
     double accumulator = 0.0;
 
