@@ -1,7 +1,10 @@
 #pragma once
 
 #define GLFW_INCLUDE_NONE
+#include <string>
 #include <GLFW/glfw3.h>
+
+#include "Vec2.h"
 
 class Window {
 
@@ -17,5 +20,8 @@ public:
     void pollEvents() const;
 
     GLFWwindow* getWindow() const;
+    Vec2 getMousePosition() const;
+    bool isMousePressed(int button) const;
+    void setTitle(const std::string& title) const;
 
 };

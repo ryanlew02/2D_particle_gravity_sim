@@ -4,7 +4,7 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <iostream>
-
+#include <string>
 #include "glad/gl.h"
 
 
@@ -71,3 +71,36 @@ void Window::pollEvents() const {
 GLFWwindow* Window::getWindow() const {
     return window;
 }
+
+Vec2 Window::getMousePosition() const {
+
+    double x, y;
+    glfwGetCursorPos(window, &x, &y);
+
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
+    if (width == 0 || height == 0) {
+        return Vec2(0.0f, 0.0f);
+    }
+
+    return {
+        static_cast<float>(2.0 * x / width - 1.0),
+        static_cast<float>(1.0 - 2.0 * y / height)
+    };
+
+}
+
+bool Window::isMousePressed(int button) const {
+    return glfwGetMouseButton(window, button) == GLFW_PRESS;
+}
+
+void Window::setTitle(const std::string& title) const {
+    glfwSetWindowTitle(window, title.c_str());
+}
+
+
+
+
+
+
