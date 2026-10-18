@@ -15,6 +15,7 @@ private:
 
     GLint posLocation = -1;
     GLint radiusLocation = -1;
+    GLint colorLocation = -1;
 
     int vertexCount = 0;
 

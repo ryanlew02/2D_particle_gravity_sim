@@ -17,6 +17,7 @@ Renderer::Renderer() {
     //get uniform locations
     posLocation = glGetUniformLocation(shaderProgram, "uPosition");
     radiusLocation = glGetUniformLocation(shaderProgram, "uRadius");
+    colorLocation = glGetUniformLocation(shaderProgram, "uColor");
 
     if (posLocation == -1 || radiusLocation == -1) {
         throw std::runtime_error("Could not find position location");
@@ -48,6 +49,8 @@ void Renderer::drawCircle(const Particle& particle) const {
     //send position to the vertex shader
     glUniform2f(posLocation, particle.pos.x, particle.pos.y);
     glUniform1f(radiusLocation, particle.radius);
+
+    glUniform3f(colorLocation, particle.color[0], particle.color[1], particle.color[2]);
 
     //draw circle
     glBindVertexArray(VAO);
@@ -157,9 +160,11 @@ std::pair<const char*, const char*> Renderer::GetShaderSources() {
     #version 330 core
     out vec4 FragColor;
 
+    uniform vec3 uColor;
+
     void main()
     {
-        FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        FragColor = vec4(uColor, 1.0);
     }
     )";
 

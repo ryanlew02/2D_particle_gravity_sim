@@ -57,7 +57,7 @@ void handleCollision(Particle& a, Particle& b) {
 }
 
 void applyGravity(Particle& a, Particle& b) {
-    constexpr float G = 5.0f;
+    constexpr float G = 0.6f;
     constexpr float SOFTENING = 0.02f;
 
     const Vec2 direction = b.pos - a.pos;

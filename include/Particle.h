@@ -1,5 +1,8 @@
 #pragma once
-#include <Vec2.h>
+#include "Vec2.h"
+#include <array>
+
+
 
 class Particle {
 
@@ -7,11 +10,11 @@ public:
     Vec2 pos;
     Vec2 v;
     float radius;
-    float restitution = 0.95f;
+    float restitution = 1.0f;
     float density, mass;
+    std::array<float, 3> color = {0.0f, 0.0f, 0.0f};
 
-
-    Particle(float x, float y, float vx, float vy, float radius, float density = 1.0f);
+    Particle(float x, float y, float vx, float vy, float radius, std::array<float, 3> color = {0.0f, 0.0f, 0.0f}, float density = 1.0f);
 
     void accelerate(const Vec2& acc);
 

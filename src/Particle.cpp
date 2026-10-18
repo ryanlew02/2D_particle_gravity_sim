@@ -1,8 +1,8 @@
 #include "Particle.h"
 #include "Constants.h"
 
-Particle::Particle(const float x, const float y, float vx, float vy, float radius, float density)
-    : pos(x, y), v(vx, vy), radius(radius), density(density), mass(density * 3.14159265 * radius * radius) {}
+Particle::Particle(const float x, const float y, float vx, float vy, float radius, std::array<float, 3> color,  float density)
+    : pos(x, y), v(vx, vy), radius(radius), color(color), density(density), mass(density * 3.14159265 * radius * radius) {}
 
 void Particle::accelerate(const Vec2& acc) {
     v += acc * FIXED_DT;
@@ -46,7 +46,7 @@ void Particle::handleCollisions() {
 }
 
 //checks if 2 circles are colliding
-[[nodiscard]] bool Particle::isColliding(const Particle& otherParticle) const {
+bool Particle::isColliding(const Particle& otherParticle) const {
     const Vec2 diff = pos - otherParticle.pos;
     const float rDist = radius + otherParticle.radius;
 

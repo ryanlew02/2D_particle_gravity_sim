@@ -14,11 +14,16 @@ App::App() : window(800, 800, "Physics Simulation") {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
-    std::uniform_real_distribution<float> dis2(-3.0f, 3.0f);
+    std::uniform_real_distribution<float> dis2(-1.0f, 1.0f);
+    std::uniform_real_distribution<float> color(0.0f, 1.0f);
 
-    for (int i = 0; i < 12; i++) {
-        particles.emplace_back(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.05f);
-    }
+    particles.emplace_back(0.0f, 0.0f, 0.0f, 0.0f, 0.10f, std::array<float, 3>{1.0f, 1.0f, 1.0f}, 100.0f);
+    particles.emplace_back(-0.5f, 0.5f, 0.0f, -1.5f, 0.05f, std::array<float, 3>{color(gen), color(gen), color(gen)});
+    particles.emplace_back(0.5f, -0.5f, 0.0f, 1.5f, 0.05f, std::array<float, 3>{color(gen), color(gen), color(gen)});
+    particles.emplace_back(0.5f, 0.5f, 1.5f, 0.0f, 0.05f, std::array<float, 3>{color(gen), color(gen), color(gen)});
+    particles.emplace_back(-0.5f, -0.5f, -1.5f, 0.0f, 0.05f, std::array<float, 3>{color(gen), color(gen), color(gen)});
+
+
 }
 
 void App::run() {
@@ -32,7 +37,7 @@ void App::run() {
 
     //main loop
     while (!window.shouldClose()) {
-        double currentTime = glfwGetTime();
+        const double currentTime = glfwGetTime();
         double frameTime = currentTime - lastTime;
 
         lastTime = currentTime;
@@ -85,9 +90,9 @@ void App::update() {
         }
     }
 
-    for (auto& particle : particles) {
-        particle.handleCollisions();
-    }
+    // for (auto& particle : particles) {
+    //     particle.handleCollisions();
+    // }
 
 }
 
