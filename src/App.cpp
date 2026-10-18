@@ -2,6 +2,8 @@
 
 #define GLFW_INCLUDE_NONE
 #include <stdexcept>
+#include <random>
+#include <algorithm>
 #include <GLFW/glfw3.h>
 #include "Constants.h"
 #include "Physics.h"
@@ -13,8 +15,6 @@ App::App() : window(800, 800, "Physics Simulation") {
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
     std::uniform_real_distribution<float> dis2(-3.0f, 3.0f);
-
-    std::vector<Particle> particles;
 
     for (int i = 0; i < 12; i++) {
         particles.emplace_back(dis(gen), dis(gen), dis2(gen), dis2(gen), 0.05f);
@@ -53,8 +53,8 @@ void App::run() {
         render();
 
         //swap buffers and see if there are any event updates
-        glfwSwapBuffers(window.getWindow());
-        glfwPollEvents();
+        window.swapBuffers();
+        window.pollEvents();
     }
 
 
@@ -95,7 +95,7 @@ void App::update() {
 
 void App::render() {
 
-    glClear(GL_COLOR_BUFFER_BIT);
+    renderer.clear();
 
     for (auto& particle : particles) {
         renderer.drawCircle(particle);
